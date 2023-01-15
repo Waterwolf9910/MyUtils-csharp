@@ -17,6 +17,17 @@ namespace MyUtils {
             return (Convert.ToBase64String(key), Convert.ToBase64String(nonce), Convert.ToBase64String(tag), Convert.ToBase64String(cipherText));
         }
 
+        public static (string key, string nonce, string tag, string cipherText) Encrypt(string key, string text) {
+            byte[] _key = Encoding.ASCII.GetBytes(key);
+            byte[] nonce = Encoding.ASCII.GetBytes(new MyRandom(AesGcm.NonceByteSizes.MaxSize).AlphaNumSpecial(true));
+            byte[] plainText = Encoding.ASCII.GetBytes(text);
+            byte[] cipherText = new byte[plainText.Length];
+            byte[] tag = new byte[AesGcm.TagByteSizes.MaxSize];
+            using AesGcm aes = new(_key);
+            aes.Encrypt(nonce, plainText, cipherText, tag);
+            return (Convert.ToBase64String(_key), Convert.ToBase64String(nonce), Convert.ToBase64String(tag), Convert.ToBase64String(cipherText));
+        }
+        
         public static string Decrypt(string key, string nonce, string tag, string cipherText) {
             byte[] encrypted = Convert.FromBase64String(cipherText);
             byte[] plainText = new byte[encrypted.Length];

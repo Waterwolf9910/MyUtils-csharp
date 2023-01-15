@@ -53,6 +53,55 @@ namespace MyUtils {
             return true;
         }
 
+        public static bool ExtractsArchive(string archivePath, string exportPath, params string[] filesToExport) {
+            using var stream = File.OpenRead(archivePath);
+            using var wrapper = ReaderWrapper.GetReader(stream);
+            var reader = wrapper.reader;
+            if (!Directory.Exists(exportPath)) {
+                Directory.CreateDirectory(exportPath);
+            }
+            if (filesToExport != null) {
+                bool hasExported = false;
+                while (reader.MoveToNextEntry()) {
+                    if (!reader.Entry.IsDirectory && filesToExport.Contains(reader.Entry.Key)) {
+                        reader.WriteEntryTo(Path.GetFullPath(reader.Entry.Key, exportPath));
+                        hasExported = true;
+                    }
+                }
+                return hasExported;
+            }
+            else {
+                try {
+                    reader.WriteAllToDirectory(Path.GetFullPath(exportPath), new() {
+                        ExtractFullPath = true,
+                        Overwrite = true
+                        // PreserveAttributes = true
+                    });
+                }
+                catch {
+                    return false;
+                }
+            }
+            try {
+                if (Directory.GetFiles(exportPath).Length < 1 && Directory.GetDirectories(exportPath).Length == 1) {
+                    var loneDir = Directory.GetDirectories(exportPath).First();
+                    var dirs = Directory.GetDirectories(loneDir);
+                    var files = Directory.GetFiles(loneDir);
+                    foreach (var dir in dirs) {
+                        Directory.Move(dir, Path.GetFullPath(Path.GetFileName(dir), exportPath));
+                    }
+                    foreach (var file in files) {
+                        Directory.Move(file, Path.GetFullPath(Path.GetFileName(file), exportPath));
+                    }
+                    Directory.Delete(loneDir);
+                }
+            }
+            catch {
+                return false;
+            }
+            return true;
+        }
+
         public static ValueComparer ListVC<T>() where T : notnull {
 
             return new ValueComparer<List<T>>(

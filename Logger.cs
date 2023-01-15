@@ -8,7 +8,7 @@ namespace MyUtils {
 
     }
     public class Logger {
-        private static string file_suffix { get; } = DateTime.Now.ToString("ddMMyy-hhmmss");
+        private static string file_suffix { get; } = DateTime.Now.ToString("MMddyy-hhmmss");
         protected string LogPath {
             get;
         }
@@ -16,10 +16,11 @@ namespace MyUtils {
         protected string BaseMessage {
             get;
         }
-        private static Logger main { get; } = new(new());
+        protected Queue<string> queue { get; } = new();
+        private static Logger Main { get; } = new(new());
 
         public static Logger GetMain() {
-            return main;
+            return Main;
         }
 
         public Logger(LogSettings? settings = null) {
@@ -101,7 +102,7 @@ namespace MyUtils {
         }
 
 
-        public void SetDebugMode(bool mode) {
+        public static void SetDebugMode(bool mode) {
             DebugMode = mode;
         }
 
@@ -127,16 +128,21 @@ namespace MyUtils {
             return returnString;
         }
 
-        protected void Write(string data) {
+        protected void Write(string data, int trys = 0) {
             try {
+                // queue.
                 File.AppendAllText(LogPath, $"{data}\n", System.Text.Encoding.UTF8);
             } catch {
+                if (trys > 2) {
+                    return;
+                }
                 var timer = new System.Timers.Timer() {
                     Enabled = true,
                     Interval = 50
                 };
                 timer.Elapsed += (a, e) => {
-                    Write(data);
+                    timer.Dispose();
+                    Write(data, trys+1);
                 };
             }
         }
