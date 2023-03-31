@@ -5,7 +5,7 @@ using SharpCompress.Readers;
 namespace MyUtils {
     public static partial class Utils {
 
-        public static bool ExtractArchive(string archivePath, string exportPath, string? fileToExport = null, string? filename = null) {
+        public static bool ExtractFileOrDir(string archivePath, string exportPath, string? fileToExport = null, string? filename = null) {
             using var stream = File.OpenRead(archivePath);
             using var wrapper = ReaderWrapper.GetReader(stream);
             var reader = wrapper.reader;
@@ -24,53 +24,6 @@ namespace MyUtils {
                 }
                 return false;
             } else {
-                try {
-                    reader.WriteAllToDirectory(Path.GetFullPath(exportPath), new() {
-                        ExtractFullPath = true,
-                        Overwrite = true
-                        // PreserveAttributes = true
-                    });
-                } catch {
-                    return false;
-                }
-            }
-            try {
-                if (Directory.GetFiles(exportPath).Length < 1 && Directory.GetDirectories(exportPath).Length == 1) {
-                    var loneDir = Directory.GetDirectories(exportPath).First();
-                    var dirs = Directory.GetDirectories(loneDir);
-                    var files = Directory.GetFiles(loneDir);
-                    foreach (var dir in dirs) {
-                        Directory.Move(dir, Path.GetFullPath(Path.GetFileName(dir), exportPath));
-                    }
-                    foreach (var file in files) {
-                        Directory.Move(file, Path.GetFullPath(Path.GetFileName(file), exportPath));
-                    }
-                    Directory.Delete(loneDir);
-                }
-            } catch {
-                return false;
-            }
-            return true;
-        }
-
-        public static bool ExtractsArchive(string archivePath, string exportPath, params string[] filesToExport) {
-            using var stream = File.OpenRead(archivePath);
-            using var wrapper = ReaderWrapper.GetReader(stream);
-            var reader = wrapper.reader;
-            if (!Directory.Exists(exportPath)) {
-                Directory.CreateDirectory(exportPath);
-            }
-            if (filesToExport != null) {
-                bool hasExported = false;
-                while (reader.MoveToNextEntry()) {
-                    if (!reader.Entry.IsDirectory && filesToExport.Contains(reader.Entry.Key)) {
-                        reader.WriteEntryTo(Path.GetFullPath(reader.Entry.Key, exportPath));
-                        hasExported = true;
-                    }
-                }
-                return hasExported;
-            }
-            else {
                 try {
                     reader.WriteAllToDirectory(Path.GetFullPath(exportPath), new() {
                         ExtractFullPath = true,
@@ -102,6 +55,60 @@ namespace MyUtils {
             return true;
         }
 
+        public static Dictionary<string, bool> ExtractFiles(string archivePath, string exportPath, params (string name, string? outputName)[] filesToExport) {
+            using var stream = File.OpenRead(archivePath);
+            using var wrapper = ReaderWrapper.GetReader(stream);
+            var reader = wrapper.reader;
+            var results = new Dictionary<string, bool>();
+            if (!Directory.Exists(exportPath)) {
+                Directory.CreateDirectory(exportPath);
+            }
+            foreach (var (name, _) in filesToExport) {
+                results.Add(name, false);
+            }
+            if (filesToExport != null) {
+                while (reader.MoveToNextEntry()) {
+                    foreach (var (name, outputName) in filesToExport) {
+                        if (!reader.Entry.IsDirectory && name == reader.Entry.Key) {
+                            reader.WriteEntryTo(Path.GetFullPath(outputName ?? name, exportPath));
+                            results.Remove(name);
+                            results.Add(name, true);
+                        }
+                    }
+                }
+                return results;
+            } else {
+                try {
+                    reader.WriteAllToDirectory(Path.GetFullPath(exportPath), new() {
+                        ExtractFullPath = true,
+                        Overwrite = true
+                        // PreserveAttributes = true
+                    });
+                }
+                catch {
+                    return results;
+                }
+            }
+            try {
+                if (Directory.GetFiles(exportPath).Length < 1 && Directory.GetDirectories(exportPath).Length == 1) {
+                    var loneDir = Directory.GetDirectories(exportPath).First();
+                    var dirs = Directory.GetDirectories(loneDir);
+                    var files = Directory.GetFiles(loneDir);
+                    foreach (var dir in dirs) {
+                        Directory.Move(dir, Path.GetFullPath(Path.GetFileName(dir), exportPath));
+                    }
+                    foreach (var file in files) {
+                        Directory.Move(file, Path.GetFullPath(Path.GetFileName(file), exportPath));
+                    }
+                    Directory.Delete(loneDir);
+                }
+            }
+            catch {
+                return results;
+            }
+            return results;
+        }
+
         public static ValueComparer ListVC<T>() where T : notnull {
 
             return new ValueComparer<List<T>>(
@@ -118,15 +125,7 @@ namespace MyUtils {
             );
         }
 
-        public static event Action Ready = new(() => { });
-
-        //internal static Config config { get; set; } = new();
-
-        internal static void SendReady() {
-            Ready.Invoke();
-        }
-
-        private class ReaderWrapper: IDisposable {
+        private class ReaderWrapper : IDisposable {
 
             public bool Disposed {
                 get; private set;
@@ -141,7 +140,8 @@ namespace MyUtils {
             private ReaderWrapper(Stream file) {
                 try {
                     reader = ReaderFactory.Open(file);
-                } catch (InvalidOperationException) {
+                }
+                catch (InvalidOperationException) {
                     reader = SevenZipArchive.Open(file).ExtractAllEntries();
                 }
             }

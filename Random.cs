@@ -9,10 +9,11 @@ namespace MyUtils {
 
         public static MyRandom Shared { get; private set; } = new();
 
-        private int length {
+        private int Length {
             get;
         }
-        private Random random { get; } = new(Random.Shared.Next(1_000, 50_000));
+
+        private Random Ran { get; } = new(Random.Shared.Next(1_000, 50_000));
 
         private static bool regRefresh = false;
         private static void RefreshShared() {
@@ -22,45 +23,45 @@ namespace MyUtils {
                 Enabled = true,
             };
 
-            timer.Elapsed += (a, b) => {
+            timer.Elapsed += (_, _) => {
                 Shared = new();
             };
         }
 
-        public MyRandom(int length = 25) {
+        public MyRandom(int length = 32) {
             if (!regRefresh) {
                 RefreshShared();
                 regRefresh = true;
             }
-            this.length = length;
+            this.Length = length;
         }
 
         // Hooks into Random.Next
         public int Int(int max = int.MaxValue, int min = 0) {
-            return random.Next(min, max);
+            return Ran.Next(min, max);
         }
 
         public long Long(long max = long.MaxValue, long min = 0) {
-            return random.NextInt64(min, max);
+            return Ran.NextInt64(min, max);
         }
 
         public void Bytes(byte[] buffer) {
-            random.NextBytes(buffer);
+            Ran.NextBytes(buffer);
         }
 
         public float Float() {
-            return random.NextSingle();
+            return Ran.NextSingle();
         }
 
         public double Double() {
-            return random.NextDouble();
+            return Ran.NextDouble();
         }
 
         public string Alpha(int length, bool caps = false) {
             string returner = "";
             while (returner.Length < length) {
-                string chara = Alphabet[random.Next(26)];
-                if (caps && random.Next(3) == random.Next(3)) {
+                string chara = Alphabet[Ran.Next(26)];
+                if (caps && Ran.Next(3) == Ran.Next(3)) {
                     chara = chara.ToUpper();
                 }
                 returner = $"{returner}{chara}";
@@ -69,41 +70,41 @@ namespace MyUtils {
         }
 
         public string Alpha(bool caps = false) {
-            return Alpha(this.length, caps);
+            return Alpha(this.Length, caps);
         }
 
         public string Special(int length) {
             string returner = "";
             while (returner.Length < length) {
-                returner = $"{returner}{SpecialChars[random.Next(32)]}";
+                returner = $"{returner}{SpecialChars[Ran.Next(32)]}";
             }
             return returner;
         }
 
         public string Special() {
-            return Special(this.length);
+            return Special(this.Length);
         }
 
         public string AlphaNum(bool caps = false) {
             string returner = "";
-            while (returner.Length < length) {
-                returner = $"{returner}{(random.Next(2) == random.Next(2) ? Int(9) : Alpha(1, caps))}";
+            while (returner.Length < Length) {
+                returner = $"{returner}{( Ran.Next(2) == Ran.Next(2) ? Int(9) : Alpha(1, caps) )}";
             }
             return returner;
         }
 
         public string AlphaSpecial(bool caps = false) {
             string returner = "";
-            while (returner.Length < this.length) {
-                returner = $"{returner}{(random.Next(2) == random.Next(2) ? Alpha(1, caps) : Special(1))}";
+            while (returner.Length < this.Length) {
+                returner = $"{returner}{( Ran.Next(2) == Ran.Next(2) ? Alpha(1, caps) : Special(1) )}";
             }
             return returner;
         }
 
         public string NumberSpecial() {
             string returner = "";
-            while (returner.Length < this.length) {
-                returner = $"{returner}${(random.Next(2) == random.Next(2) ? random.Next(10) : Special(1))}";
+            while (returner.Length < this.Length) {
+                returner = $"{returner}${( Ran.Next(2) == Ran.Next(2) ? Ran.Next(10) : Special(1) )}";
             }
             return returner;
         }
@@ -111,9 +112,9 @@ namespace MyUtils {
         public string AlphaNumSpecial(int length, bool caps = false) {
             string returner = "";
             while (returner.Length < length) {
-                switch (random.Next(3)) {
+                switch (Ran.Next(3)) {
                     case 0: {
-                        returner = $"{returner} {random.Next(10)}";
+                        returner = $"{returner} {Ran.Next(10)}";
                         break;
                     }
                     case 1: {
@@ -131,10 +132,12 @@ namespace MyUtils {
         }
 
         public string AlphaNumSpecial(bool caps = false) {
-            return AlphaNumSpecial(this.length, caps);
+            return AlphaNumSpecial(this.Length, caps);
         }
 
-        private static string[] Alphabet { get; } = {
+        private static string[] Alphabet {
+            get;
+        } = {
             "a",
             "b",
             "c",
@@ -163,7 +166,9 @@ namespace MyUtils {
             "z"
         };
 
-        private static string[] SpecialChars { get; } = {
+        private static string[] SpecialChars {
+            get;
+        } = {
             "`",
             "~",
             "!",

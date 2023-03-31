@@ -3,18 +3,21 @@ using System.Collections;
 
 namespace MyUtils {
     public class LogSettings {
-        public string name = "main";
-        public string path = Path.GetFullPath("logs/bot.log");
+        public string Name = "main";
+        public string Path = System.IO.Path.GetFullPath("logs/main.log");
 
     }
     public class Logger {
-        private static string file_suffix { get; } = DateTime.Now.ToString("MMddyy-hhmmss");
+        private static string FileSuffix { get; } = DateTime.Now.ToString("MMddyy-hhmmss");
         protected string LogPath {
             get;
         }
-        protected static bool DebugMode {get; private set;} = false;
-        protected string BaseMessage {
+        protected LogSettings Settings {
             get;
+        }
+        protected static bool DebugMode { get; private set; } = false;
+        protected string BaseMessage() {
+            return $"[{FormatDate()}] [{Settings.Name}]";
         }
         protected Queue<string> queue { get; } = new();
         private static Logger Main { get; } = new(new());
@@ -28,14 +31,14 @@ namespace MyUtils {
             if (!Directory.Exists(Path.GetFullPath("logs"))) {
                 Directory.CreateDirectory(Path.GetFullPath("logs"));
             }
-            if (!settings.path.EndsWith(".log")) {
-                settings.path = $"{settings.path}.log";
+            if (!settings.Path.EndsWith(".log")) {
+                settings.Path = $"{settings.Path}.log";
             }
-            if (!Path.IsPathRooted(settings.path) && !Path.IsPathFullyQualified(settings.path) && !settings.path.Contains("..")) {
-                settings.path = $"logs/{settings.path}";
+            if (!Path.IsPathRooted(settings.Path) && !Path.IsPathFullyQualified(settings.Path) && !settings.Path.Contains("..")) {
+                settings.Path = $"logs/{settings.Path}";
             }
-            LogPath = Path.GetFullPath(settings.path.Replace(".log", $"-{file_suffix}.log"));
-            BaseMessage = $"[{FormatDate()}] [{settings.name}]";
+            Settings = settings;
+            LogPath = Path.GetFullPath(settings.Path.Replace(".log", $"-{FileSuffix}.log"));
             if (!Directory.Exists(Path.GetDirectoryName(LogPath))) {
                 throw new ArgumentException($"{Path.GetDirectoryName(LogPath)} does not exist");
             }
@@ -74,14 +77,14 @@ namespace MyUtils {
 
         public void Fatal(Exception e, params object[]? message) {
             string returnString = GetReturnString(in message, "fatal");
-            returnString = $"{returnString}\n${(returnString != null ? "    " : "")}{e.Message}: {e.StackTrace}";
+            returnString = $"{returnString}\n${( returnString != null ? "    " : "" )}{e.Message}: {e.StackTrace}";
             Write(returnString);
             Console.WriteLine(returnString);
         }
 
         public void WriteFatal(Exception e, params object[]? message) {
             string returnString = GetReturnString(in message, "fatal");
-            returnString = $"{returnString}\n${(returnString != null ? "    " : "")}{e.Message}: {e.StackTrace}";
+            returnString = $"{returnString}\n${( returnString != null ? "    " : "" )}{e.Message}: {e.StackTrace}";
             Write(returnString);
         }
 
@@ -119,12 +122,12 @@ namespace MyUtils {
                     LoopArray(list, ref returnString);
                     continue;
                 }
-                returnString = String.Format($"{{0}}{(returnString == "" ? "" : " ")}{{1}}", returnString, obj);
+                returnString = string.Format($"{{0}}{( returnString == "" ? "" : " " )}{{1}}", returnString, obj);
             }
             if (returnString == "") {
                 return "";
             }
-            returnString = String.Format("{0} [{1}] {2}", BaseMessage, type, returnString);
+            returnString = string.Format("{0} [{1}] {2}", BaseMessage(), type, returnString);
             return returnString;
         }
 
@@ -132,7 +135,8 @@ namespace MyUtils {
             try {
                 // queue.
                 File.AppendAllText(LogPath, $"{data}\n", System.Text.Encoding.UTF8);
-            } catch {
+            }
+            catch {
                 if (trys > 2) {
                     return;
                 }
@@ -140,9 +144,9 @@ namespace MyUtils {
                     Enabled = true,
                     Interval = 50
                 };
-                timer.Elapsed += (a, e) => {
+                timer.Elapsed += (_, _) => {
                     timer.Dispose();
-                    Write(data, trys+1);
+                    Write(data, trys + 1);
                 };
             }
         }
@@ -154,7 +158,7 @@ namespace MyUtils {
                     LoopArray(list, ref returnString, depth + 1);
                     continue;
                 }
-                returnString = String.Format($"{returnString} {(i == 0 ? "[ " : "")}{{0}}{(i == arr.Count - 1 ? " ]" : ",")}", obj);
+                returnString = string.Format($"{returnString} {( i == 0 ? "[ " : "" )}{{0}}{( i == arr.Count - 1 ? " ]" : "," )}", obj);
             }
             if (depth == 0) {
                 returnString = $"{returnString} ]";
